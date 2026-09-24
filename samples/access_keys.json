@@ -1,0 +1,23 @@
+{
+  "collected_at": "2026-09-24T00:00:00Z",
+  "access_keys": [
+    {
+      "user_name": "demo-admin",
+      "key_id": "DEMO_OLD_ACTIVE",
+      "status": "Active",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "user_name": "demo-developer",
+      "key_id": "DEMO_NEW_ACTIVE",
+      "status": "Active",
+      "created_at": "2026-09-01T00:00:00Z"
+    },
+    {
+      "user_name": "demo-service",
+      "key_id": "DEMO_OLD_INACTIVE",
+      "status": "Inactive",
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}
