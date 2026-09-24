@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "key_data_collected_at": "2026-09-24T00:00:00Z",
+  "summary": {
+    "finding_count": 8,
+    "unknown_count": 1,
+    "user_count": 3,
+    "access_key_count": 4
+  },
+  "findings": [
+    {
+      "rule_id": "IAM001",
+      "statement": 1,
+      "sid": "AllowAllActions",
+      "message": "모든 작업과 모든 리소스를 허용하는 구문",
+      "has_condition": false
+    },
+    {
+      "rule_id": "IAM003",
+      "user_name": "demo-admin",
+      "message": "콘솔 로그인이 가능하지만 MFA가 설정되어 있지 않습니다.",
+      "recommendation": "해당 IAM 사용자에 MFA를 설정하세요."
+    },
+    {
+      "rule_id": "IAM004",
+      "user_name": "demo-unused",
+      "key_id": "DEMO_UNUSED_ACTIVE",
+      "age_days": 266,
+      "threshold_days": 90,
+      "message": "생성 후 266일 지난 활성 Access Key입니다.",
+      "recommendation": "사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요."
+    },
+    {
+      "rule_id": "IAM004",
+      "user_name": "demo-recent",
+      "key_id": "DEMO_RECENT_ACTIVE",
+      "age_days": 266,
+      "threshold_days": 90,
+      "message": "생성 후 266일 지난 활성 Access Key입니다.",
+      "recommendation": "사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요."
+    },
+    {
+      "rule_id": "IAM004",
+      "user_name": "demo-never-used",
+      "key_id": "DEMO_NEVER_USED",
+      "age_days": 266,
+      "threshold_days": 90,
+      "message": "생성 후 266일 지난 활성 Access Key입니다.",
+      "recommendation": "사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요."
+    },
+    {
+      "rule_id": "IAM004",
+      "user_name": "demo-unknown",
+      "key_id": "DEMO_USAGE_UNKNOWN",
+      "age_days": 266,
+      "threshold_days": 90,
+      "message": "생성 후 266일 지난 활성 Access Key입니다.",
+      "recommendation": "사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요."
+    },
+    {
+      "rule_id": "IAM005",
+      "user_name": "demo-unused",
+      "key_id": "DEMO_UNUSED_ACTIVE",
+      "unused_days": 176,
+      "threshold_days": 90,
+      "usage_status": "used",
+      "message": "176일 동안 사용되지 않은 활성 키입니다.",
+      "recommendation": "사용처와 의존성을 확인한 뒤 불필요한 키의 비활성화를 검토하세요."
+    },
+    {
+      "rule_id": "IAM005",
+      "user_name": "demo-never-used",
+      "key_id": "DEMO_NEVER_USED",
+      "unused_days": 266,
+      "threshold_days": 90,
+      "usage_status": "never_used",
+      "message": "266일 동안 사용되지 않은 활성 키입니다.",
+      "recommendation": "사용처와 의존성을 확인한 뒤 불필요한 키의 비활성화를 검토하세요."
+    }
+  ],
+  "unknowns": [
+    {
+      "user_name": "demo-unknown",
+      "key_id": "DEMO_USAGE_UNKNOWN",
+      "message": "사용 정보를 확인할 수 없어 미사용 여부를 판단할 수 없습니다."
+    }
+  ],
+  "limitations": [
+    "제공된 입력 데이터만 분석하며 실제 AWS에 연결하지 않습니다.",
+    "실제 유효 권한과 정책 조건 충족 여부는 평가하지 않습니다.",
+    "키의 생성 후 경과 기간과 미사용 기간 기준은 각각 90일입니다.",
+    "사용 정보를 모르는 활성 키는 판단 불가로 분리합니다.",
+    "탐지 0건이 안전함을 의미하지는 않습니다."
+  ],
+  "sources": {
+    "policy": "admin_policy.json",
+    "users": "users.json",
+    "keys": "unused_access_keys.json"
+  }
+}
