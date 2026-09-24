@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "user_name": "demo-admin",
+      "console_access": true,
+      "mfa_enabled": false
+    },
+    {
+      "user_name": "demo-developer",
+      "console_access": true,
+      "mfa_enabled": true
+    },
+    {
+      "user_name": "demo-service",
+      "console_access": false,
+      "mfa_enabled": false
+    }
+  ]
+}
