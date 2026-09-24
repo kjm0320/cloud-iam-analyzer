@@ -1,7 +1,7 @@
 import argparse
 import json
 from pathlib import Path
-
+from validation import validate_policy
 
 def analyze_policy(policy):
     findings = []
@@ -114,8 +114,13 @@ def main():
                     f"[ERROR] {field}는 문자열 또는 문자열 배열이어야 합니다.\n",
                 )
 
-    findings = analyze_policy(policy)
+    
+    try:
+        validate_policy(policy)
+    except ValueError as error:
+        parser.exit(1, f"[ERROR] {error}\n")
 
+    findings = analyze_policy(policy)
     if args.output:
         if args.output.resolve() == args.policy.resolve():
             parser.exit(
