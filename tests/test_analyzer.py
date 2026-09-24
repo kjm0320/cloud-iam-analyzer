@@ -70,6 +70,45 @@ class TestAnalyzePolicy(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertTrue(findings[0]["has_condition"])
 
+class TestServiceWildcard(unittest.TestCase):
+    def test_service_wildcard_is_detected(self):
+        policy = {
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "*",
+            }]
+        }
+
+        findings = analyze_policy(policy)
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["rule_id"], "IAM002")
+
+    def test_service_wildcard_on_limited_resource(self):
+        policy = {
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": ["s3:*"],
+                "Resource": "arn:aws:s3:::example-demo-bucket/*",
+            }]
+        }
+
+        findings = analyze_policy(policy)
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["rule_id"], "IAM002")
+
+    def test_denied_service_wildcard_is_not_flagged(self):
+        policy = {
+            "Statement": [{
+                "Effect": "Deny",
+                "Action": "s3:*",
+                "Resource": "*",
+            }]
+        }
+
+        self.assertEqual(analyze_policy(policy), [])
 
 if __name__ == "__main__":
     unittest.main()

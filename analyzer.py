@@ -7,7 +7,6 @@ def analyze_policy(policy):
     findings = []
     statements = policy.get("Statement", [])
 
-    # Statement가 객체 하나인 경우도 처리
     if isinstance(statements, dict):
         statements = [statements]
 
@@ -18,7 +17,6 @@ def analyze_policy(policy):
         actions = statement.get("Action", [])
         resources = statement.get("Resource", [])
 
-        # 문자열과 배열 형식 모두 처리
         if isinstance(actions, str):
             actions = [actions]
         if isinstance(resources, str):
@@ -30,6 +28,26 @@ def analyze_policy(policy):
                 "statement": index,
                 "sid": statement.get("Sid", "(없음)"),
                 "message": "모든 작업과 모든 리소스를 허용하는 구문",
+                "has_condition": "Condition" in statement,
+            })
+
+        service_wildcards = sorted({
+            action
+            for action in actions
+            if action.endswith(":*")
+            and action.count(":") == 1
+            and action.split(":")[0]
+        })
+
+        if service_wildcards:
+            findings.append({
+                "rule_id": "IAM002",
+                "statement": index,
+                "sid": statement.get("Sid", "(없음)"),
+                "message": (
+                    "서비스의 모든 작업을 허용하는 구문: "
+                    + ", ".join(service_wildcards)
+                ),
                 "has_condition": "Condition" in statement,
             })
 
@@ -90,7 +108,7 @@ def main():
         if finding["has_condition"]:
             print("검토: Condition이 있으므로 적용 조건을 확인하세요.")
 
-    print("\n참고: 현재는 전체 권한 허용 구문만 탐지합니다.")
+        print("\n참고: 현재는 전체 권한 및 서비스 전체 작업 허용 구문을 탐지합니다.")
     print("실제 유효 권한, 다른 정책의 Deny, 조건 충족 여부는 평가하지 않습니다.")
     print("탐지 0건이 안전함을 의미하지는 않습니다.")
 
