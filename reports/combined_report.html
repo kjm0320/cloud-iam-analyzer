@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud IAM Analyzer · 보안 점검 보고서</title>
+<style>
+:root {
+    color-scheme: light;
+    --text: #17243b;
+    --muted: #59697e;
+    --border: #dce4ee;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: #f3f6fb;
+    color: var(--text);
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.65;
+}
+main { max-width: 1240px; margin: auto; padding: 44px 24px; }
+header { margin-bottom: 26px; }
+.brand { color: #3158bb; font-weight: 800; letter-spacing: .08em; }
+h1 { font-size: 32px; margin: 8px 0; letter-spacing: -.04em; }
+h2 { font-size: 20px; margin: 0; }
+p { margin: 8px 0; }
+.subtitle, .sub { color: var(--muted); }
+.sub { font-size: 12px; margin-top: 6px; }
+.meta { font-size: 12px; color: var(--muted); margin-top: 16px; }
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.card, .panel {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+.card { padding: 22px; }
+.card-label { font-size: 14px; font-weight: 700; }
+.number { font-size: 38px; font-weight: 800; margin: 6px 0; }
+.card.warning { background: #fff7ed; border-color: #f2c994; }
+.card.warning .number { color: #a64409; }
+.card.info { background: #eff6ff; border-color: #b7d1f5; }
+.card.info .number { color: #245bb3; }
+.panel { padding: 24px; margin-bottom: 22px; }
+.section-note { color: var(--muted); font-size: 13px; margin: 6px 0 20px; }
+.rules {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+.rule {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8fafc;
+}
+.rule.active { background: #fffaf4; border-color: #efd1a9; }
+.rule-code { font-size: 12px; color: var(--muted); font-weight: 700; }
+.rule-name { font-size: 13px; min-height: 44px; margin: 6px 0; }
+.rule strong { font-size: 25px; }
+.rule small { font-size: 12px; font-weight: 400; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 850px; }
+th {
+    text-align: left;
+    background: #f5f7fb;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 14px;
+}
+td {
+    padding: 18px 14px;
+    border-bottom: 1px solid #e8edf4;
+    vertical-align: top;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+th:nth-child(1) { width: 17%; }
+th:nth-child(2) { width: 24%; }
+th:nth-child(3) { width: 31%; }
+th:nth-child(4) { width: 28%; }
+tr:last-child td { border-bottom: none; }
+.badge {
+    display: inline-block;
+    border-radius: 6px;
+    background: #fff0d8;
+    color: #8b4307;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.rule-label { margin-top: 8px; font-size: 12px; }
+.key { font-family: monospace; font-size: 12px; color: var(--muted);
+        overflow-wrap: anywhere; margin-top: 5px; }
+.unknown-item {
+    background: #eff6ff;
+    border-left: 4px solid #477bd3;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    font-size: 13px;
+}
+.source {
+    display: inline-block;
+    background: #f1f4f9;
+    border-radius: 6px;
+    padding: 5px 10px;
+    margin: 4px 6px 4px 0;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+ul { padding-left: 22px; color: var(--muted); font-size: 13px; }
+li { margin: 8px 0; }
+.empty { text-align: center; padding: 28px; color: var(--muted); }
+footer { text-align: center; color: var(--muted); font-size: 12px; }
+@media (max-width: 850px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .rules { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+    main { padding: 24px 12px; }
+    .panel { padding: 16px; }
+    .card { padding: 16px; }
+    h1 { font-size: 26px; }
+}
+@media print {
+    body { background: white; }
+    main { max-width: none; padding: 0; }
+    .table-wrap { overflow: visible; }
+    table { min-width: 0; }
+    .card, .rule, tr { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+    <div class="brand">CLOUD IAM ANALYZER</div>
+    <h1>보안 점검 보고서</h1>
+    <p class="subtitle">정책 권한 · 사용자 MFA · Access Key 점검 결과</p>
+    <div class="meta">
+        보고서 생성: 2026-09-24 06:25 UTC<br>
+        키 데이터 수집 시각: 2026-09-24T00:00:00Z
+    </div>
+</header>
+
+<section class="cards" aria-label="분석 요약">
+    <div class="card warning">
+        <div class="card-label">검토가 필요한 탐지</div>
+        <div class="number">8</div>
+        <div class="sub">규칙별 탐지 항목 수</div>
+    </div>
+    <div class="card info">
+        <div class="card-label">판단 불가</div>
+        <div class="number">1</div>
+        <div class="sub">추가 정보 확인 필요</div>
+    </div>
+    <div class="card">
+        <div class="card-label">분석한 사용자</div>
+        <div class="number">3</div>
+        <div class="sub">입력된 IAM 사용자</div>
+    </div>
+    <div class="card">
+        <div class="card-label">분석한 Access Key</div>
+        <div class="number">4</div>
+        <div class="sub">입력된 활성·비활성 키</div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>규칙별 탐지 현황</h2>
+    <p class="section-note">
+        동일한 대상이 여러 규칙에 해당하면 각각 집계됩니다.
+        색상은 검토 상태를 구분하며 위험도 등급을 뜻하지 않습니다.
+    </p>
+    <div class="rules"><div class="rule active"><div class="rule-code">IAM001</div><div class="rule-name">전체 권한 허용</div><strong>1<small> 건</small></strong></div><div class="rule"><div class="rule-code">IAM002</div><div class="rule-name">서비스 전체 작업 허용</div><strong>0<small> 건</small></strong></div><div class="rule active"><div class="rule-code">IAM003</div><div class="rule-name">콘솔 사용자 MFA 미설정</div><strong>1<small> 건</small></strong></div><div class="rule active"><div class="rule-code">IAM004</div><div class="rule-name">오래된 활성 Access Key</div><strong>4<small> 건</small></strong></div><div class="rule active"><div class="rule-code">IAM005</div><div class="rule-name">장기간 미사용 활성 키</div><strong>2<small> 건</small></strong></div></div>
+</section>
+
+<section class="panel">
+    <h2>탐지 상세</h2>
+    <p class="section-note">대상과 탐지 근거를 확인한 뒤 개선 방안을 검토하세요.</p>
+    <div class="table-wrap">
+        <table>
+            <thead><tr>
+                <th scope="col">탐지 규칙</th>
+                <th scope="col">대상</th>
+                <th scope="col">탐지 근거</th>
+                <th scope="col">개선 방안</th>
+            </tr></thead>
+            <tbody><tr><td><span class="badge">IAM001</span><div class="rule-label">전체 권한 허용</div></td><td><strong>입력 정책</strong><div class="sub">구문 번호: 1</div><div class="sub">Sid: AllowAllActions</div></td><td>모든 작업과 모든 리소스를 허용하는 구문</td><td>업무에 필요한 작업과 리소스로 허용 범위를 제한하세요.</td></tr><tr><td><span class="badge">IAM003</span><div class="rule-label">콘솔 사용자 MFA 미설정</div></td><td><strong>demo-admin</strong></td><td>콘솔 로그인이 가능하지만 MFA가 설정되어 있지 않습니다.</td><td>해당 IAM 사용자에 MFA를 설정하세요.</td></tr><tr><td><span class="badge">IAM004</span><div class="rule-label">오래된 활성 Access Key</div></td><td><strong>demo-unused</strong><div class="key">DEMO_UNUSED_ACTIVE</div></td><td>생성 후 266일 지난 활성 Access Key입니다.<div class="sub">생성 후 266일 경과</div><div class="sub">점검 기준 90일 이상</div></td><td>사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요.</td></tr><tr><td><span class="badge">IAM004</span><div class="rule-label">오래된 활성 Access Key</div></td><td><strong>demo-recent</strong><div class="key">DEMO_RECENT_ACTIVE</div></td><td>생성 후 266일 지난 활성 Access Key입니다.<div class="sub">생성 후 266일 경과</div><div class="sub">점검 기준 90일 이상</div></td><td>사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요.</td></tr><tr><td><span class="badge">IAM004</span><div class="rule-label">오래된 활성 Access Key</div></td><td><strong>demo-never-used</strong><div class="key">DEMO_NEVER_USED</div></td><td>생성 후 266일 지난 활성 Access Key입니다.<div class="sub">생성 후 266일 경과</div><div class="sub">점검 기준 90일 이상</div></td><td>사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요.</td></tr><tr><td><span class="badge">IAM004</span><div class="rule-label">오래된 활성 Access Key</div></td><td><strong>demo-unknown</strong><div class="key">DEMO_USAGE_UNKNOWN</div></td><td>생성 후 266일 지난 활성 Access Key입니다.<div class="sub">생성 후 266일 경과</div><div class="sub">점검 기준 90일 이상</div></td><td>사용처와 필요성을 확인하고, 임시 자격 증명 전환 또는 키 교체를 검토하세요.</td></tr><tr><td><span class="badge">IAM005</span><div class="rule-label">장기간 미사용 활성 키</div></td><td><strong>demo-unused</strong><div class="key">DEMO_UNUSED_ACTIVE</div></td><td>176일 동안 사용되지 않은 활성 키입니다.<div class="sub">미사용 기간 176일</div><div class="sub">점검 기준 90일 이상</div></td><td>사용처와 의존성을 확인한 뒤 불필요한 키의 비활성화를 검토하세요.</td></tr><tr><td><span class="badge">IAM005</span><div class="rule-label">장기간 미사용 활성 키</div></td><td><strong>demo-never-used</strong><div class="key">DEMO_NEVER_USED</div></td><td>266일 동안 사용되지 않은 활성 키입니다.<div class="sub">미사용 기간 266일</div><div class="sub">점검 기준 90일 이상</div><div class="sub">사용 이력 없음: 생성 시각 기준으로 계산</div></td><td>사용처와 의존성을 확인한 뒤 불필요한 키의 비활성화를 검토하세요.</td></tr></tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>판단 불가 항목</h2>
+    <p class="section-note">
+        정보 부족은 안전함이나 미사용을 의미하지 않습니다.
+        같은 키가 다른 규칙에서는 탐지될 수 있습니다.
+    </p>
+    <div class="unknown-item"><strong>demo-unknown</strong><div class="key">DEMO_USAGE_UNKNOWN</div><p>사용 정보를 확인할 수 없어 미사용 여부를 판단할 수 없습니다.</p></div>
+</section>
+
+<section class="panel">
+    <h2>분석 범위와 한계</h2>
+    <p class="section-note">탐지 0건인 규칙도 전체 보안 상태의 안전을 보장하지 않습니다.</p>
+    <div><span class="source">정책: admin_policy.json</span><span class="source">사용자: users.json</span><span class="source">키: unused_access_keys.json</span></div>
+    <ul><li>제공된 입력 데이터만 분석하며 실제 AWS에 연결하지 않습니다.</li><li>실제 유효 권한과 정책 조건 충족 여부는 평가하지 않습니다.</li><li>키의 생성 후 경과 기간과 미사용 기간 기준은 각각 90일입니다.</li><li>사용 정보를 모르는 활성 키는 판단 불가로 분리합니다.</li><li>탐지 0건이 안전함을 의미하지는 않습니다.</li></ul>
+</section>
+
+<footer>Cloud IAM Analyzer · 입력 데이터를 기반으로 작성한 정적 분석 보고서</footer>
+</main>
+</body>
+</html>
