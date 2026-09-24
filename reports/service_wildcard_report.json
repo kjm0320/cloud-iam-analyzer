@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "source": "service_wildcard_policy.json",
+  "finding_count": 1,
+  "findings": [
+    {
+      "rule_id": "IAM002",
+      "statement": 1,
+      "sid": "AllowAllS3Actions",
+      "message": "서비스의 모든 작업을 허용하는 구문: s3:*",
+      "has_condition": false
+    }
+  ],
+  "limitations": [
+    "IAM001과 IAM002 규칙만 적용합니다.",
+    "실제 유효 권한과 조건 충족 여부는 평가하지 않습니다.",
+    "탐지 0건이 안전함을 의미하지는 않습니다."
+  ]
+}
