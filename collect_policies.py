@@ -7,6 +7,8 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
+from aws_identity import get_account_identity
+
 
 DETAIL_FIELDS = (
     "UserDetailList",
@@ -111,21 +113,33 @@ def main():
 
     try:
         session = boto3.Session(profile_name=args.profile)
-        iam = session.client(
-            "iam",
-            config=Config(
-                connect_timeout=10,
-                read_timeout=30,
-                retries={
-                    "mode": "standard",
-                    "total_max_attempts": 3,
-                },
-            ),
+        config = Config(
+            connect_timeout=10,
+            read_timeout=30,
+            retries={
+                "mode": "standard",
+                "total_max_attempts": 3,
+            },
         )
 
+        sts = session.client(
+            "sts",
+            region_name=session.region_name or "ap-northeast-2",
+            config=config,
+        )
+        identity = get_account_identity(sts)
+
+        iam = session.client("iam", config=config)
         data = collect_policies(iam)
 
-        # 날짜를 변환하고 직렬화까지 성공한 뒤 파일을 기록합니다.
+        final_identity = get_account_identity(sts)
+        if identity != final_identity:
+            raise ValueError(
+                "수집 전후 인증 정보가 달라졌습니다. 다시 수집하세요."
+            )
+
+        data.update(identity)
+
         serialized = json.dumps(
             data,
             ensure_ascii=False,
@@ -156,6 +170,9 @@ def main():
         )
 
     summary = data["summary"]
+    masked_id = "*" * 8 + identity["account_id"][-4:]
+
+    print(f"수집 계정: {masked_id}")
     print(f"사용자 수: {summary['user_count']}")
     print(f"그룹 수: {summary['group_count']}")
     print(f"역할 수: {summary['role_count']}")

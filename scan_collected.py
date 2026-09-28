@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from account_analyzer import analyze_users
@@ -12,7 +13,9 @@ def load_json(path):
         return json.load(file)
 
 
-def build_collected_report(policies, users, keys):
+def validate_collected_identity(policies, users, keys):
+    identities = []
+
     for name, data in (
         ("정책", policies),
         ("사용자", users),
@@ -28,6 +31,57 @@ def build_collected_report(policies, users, keys):
 
         if not data.get("collected_at"):
             raise ValueError(f"{name} 데이터에 수집 시각이 없습니다.")
+
+        account_id = data.get("account_id")
+        partition = data.get("partition")
+        caller_arn = data.get("caller_arn")
+
+        if (
+            not isinstance(account_id, str)
+            or re.fullmatch(r"[0-9]{12}", account_id) is None
+        ):
+            raise ValueError(
+                f"{name} 데이터의 계정 ID가 없거나 올바르지 않습니다. "
+                "수집기를 다시 실행하세요."
+            )
+
+        if not isinstance(partition, str) or not partition:
+            raise ValueError(f"{name} 데이터에 AWS 파티션이 없습니다.")
+
+        if not isinstance(caller_arn, str):
+            raise ValueError(f"{name} 데이터에 호출자 ARN이 없습니다.")
+
+        parts = caller_arn.split(":", 5)
+
+        if (
+            len(parts) != 6
+            or parts[0] != "arn"
+            or parts[1] != partition
+            or parts[2] not in ("iam", "sts")
+            or parts[4] != account_id
+            or not parts[5]
+        ):
+            raise ValueError(
+                f"{name} 데이터의 호출자 ARN과 계정 정보가 일치하지 않습니다."
+            )
+
+        identities.append((partition, account_id))
+
+    if len(set(identities)) != 1:
+        raise ValueError(
+            "수집 파일의 AWS 계정 또는 파티션이 서로 다릅니다. "
+            "같은 프로필로 세 수집기를 다시 실행하세요."
+        )
+
+    partition, account_id = identities[0]
+    return {
+        "account_id": account_id,
+        "partition": partition,
+    }
+
+
+def build_collected_report(policies, users, keys):
+    identity = validate_collected_identity(policies, users, keys)
 
     policy_result = analyze_collected_policies(policies)
     user_findings = analyze_users(users)
@@ -75,6 +129,7 @@ def build_collected_report(policies, users, keys):
     return {
         "schema_version": "1.0",
         "report_type": "aws_collected",
+        **identity,
         "collection_times": {
             "policies": policies["collected_at"],
             "users": users["collected_at"],
@@ -106,8 +161,9 @@ def build_collected_report(policies, users, keys):
         "skipped_policies": policy_result["skipped_policies"],
         "limitations": [
             "저장된 AWS 수집 파일을 분석하며 이번 실행에서 AWS에 접속하지 않습니다.",
+            "파일에 기록된 계정 ID와 파티션의 일치 여부를 확인합니다.",
+            "로컬 파일의 위변조 여부를 증명하는 검증은 아닙니다.",
             "파일별 수집 시각이 다르며 동일 순간의 계정 상태를 보장하지 않습니다.",
-            "사용자 이름을 비교하지만 동일 AWS 계정의 데이터인지는 검증하지 않습니다.",
             "정책은 IAM001과 IAM002를 적용하며 실제 유효 권한은 계산하지 않습니다.",
             "역할 신뢰 정책, 리소스 정책, SCP는 이번 분석 대상이 아닙니다.",
             "루트 계정과 SSO 사용자는 사용자 및 키 점검 대상에 포함되지 않습니다.",
@@ -155,6 +211,9 @@ def main():
         raise SystemExit(1)
 
     summary = report["summary"]
+    masked_id = "*" * 8 + report["account_id"][-4:]
+
+    print(f"계정 일치 확인: {masked_id}")
     print(f"분석한 사용자 수: {summary['user_count']}")
     print(f"분석한 키 수: {summary['access_key_count']}")
     print(f"분석 완료 정책 수: {summary['analyzed_policy_count']}")

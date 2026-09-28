@@ -7,15 +7,20 @@ from html_collected_report import render_collected_html
 
 class TestCollectedReports(unittest.TestCase):
     def make_inputs(self):
-        collected_at = "2026-09-24T00:00:00+00:00"
+        metadata = {
+            "source": "aws_iam",
+            "collected_at": "2026-09-24T00:00:00+00:00",
+            "account_id": "123456789012",
+            "partition": "aws",
+            "caller_arn": (
+                "arn:aws:iam::123456789012:user/demo-collector"
+            ),
+        }
 
         policies = {
-            "source": "aws_iam",
-            "collected_at": collected_at,
+            **metadata,
             "authorization_details": {
-                "UserDetailList": [
-                    {"UserName": "demo-user"}
-                ],
+                "UserDetailList": [{"UserName": "demo-user"}],
                 "GroupDetailList": [],
                 "RoleDetailList": [],
                 "Policies": [{
@@ -37,8 +42,7 @@ class TestCollectedReports(unittest.TestCase):
         }
 
         users = {
-            "source": "aws_iam",
-            "collected_at": collected_at,
+            **metadata,
             "users": [{
                 "user_name": "demo-user",
                 "console_access": True,
@@ -47,8 +51,7 @@ class TestCollectedReports(unittest.TestCase):
         }
 
         keys = {
-            "source": "aws_iam",
-            "collected_at": collected_at,
+            **metadata,
             "access_keys": [{
                 "user_name": "demo-user",
                 "key_id": "DEMO_KEY",
@@ -65,6 +68,8 @@ class TestCollectedReports(unittest.TestCase):
         report = build_collected_report(*self.make_inputs())
 
         self.assertEqual(report["report_type"], "aws_collected")
+        self.assertEqual(report["account_id"], "123456789012")
+        self.assertEqual(report["partition"], "aws")
         self.assertEqual(report["summary"]["finding_count"], 4)
         self.assertEqual(report["summary"]["user_count"], 1)
         self.assertEqual(report["summary"]["access_key_count"], 1)
@@ -174,6 +179,43 @@ class TestCollectedReports(unittest.TestCase):
         render_collected_html(report)
 
         self.assertEqual(report, original)
+
+    def test_different_accounts_are_rejected(self):
+        policies, users, keys = self.make_inputs()
+        keys["account_id"] = "999999999999"
+        keys["caller_arn"] = (
+            "arn:aws:iam::999999999999:user/demo-collector"
+        )
+
+        with self.assertRaisesRegex(ValueError, "서로 다릅니다"):
+            build_collected_report(policies, users, keys)
+
+    def test_missing_or_inconsistent_identity_is_rejected(self):
+        for case in ("missing_account", "invalid_account", "wrong_arn"):
+            with self.subTest(case=case):
+                policies, users, keys = self.make_inputs()
+
+                if case == "missing_account":
+                    del users["account_id"]
+                elif case == "invalid_account":
+                    users["account_id"] = "123"
+                else:
+                    users["caller_arn"] = (
+                        "arn:aws:iam::999999999999:user/demo-collector"
+                    )
+
+                with self.assertRaises(ValueError):
+                    build_collected_report(policies, users, keys)
+
+    def test_different_partitions_are_rejected(self):
+        policies, users, keys = self.make_inputs()
+        keys["partition"] = "aws-cn"
+        keys["caller_arn"] = (
+            "arn:aws-cn:iam::123456789012:user/demo-collector"
+        )
+
+        with self.assertRaisesRegex(ValueError, "서로 다릅니다"):
+            build_collected_report(policies, users, keys)
 
 
 if __name__ == "__main__":

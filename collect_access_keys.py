@@ -7,6 +7,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
+from aws_identity import get_account_identity
 from unused_key_analyzer import analyze_unused_keys
 
 
@@ -82,7 +83,6 @@ def collect_access_keys(iam):
         ],
     }
 
-    # 기존 분석기의 입력 검증을 통과한 데이터만 저장합니다.
     analyze_unused_keys(result)
     return result
 
@@ -104,23 +104,42 @@ def main():
 
     try:
         session = boto3.Session(profile_name=args.profile)
-        iam = session.client(
-            "iam",
-            config=Config(
-                connect_timeout=10,
-                read_timeout=30,
-                retries={
-                    "mode": "standard",
-                    "total_max_attempts": 3,
-                },
-            ),
+        config = Config(
+            connect_timeout=10,
+            read_timeout=30,
+            retries={
+                "mode": "standard",
+                "total_max_attempts": 3,
+            },
         )
 
+        sts = session.client(
+            "sts",
+            region_name=session.region_name or "ap-northeast-2",
+            config=config,
+        )
+        identity = get_account_identity(sts)
+
+        iam = session.client("iam", config=config)
         data = collect_access_keys(iam)
+
+        final_identity = get_account_identity(sts)
+        if identity != final_identity:
+            raise ValueError(
+                "수집 전후 인증 정보가 달라졌습니다. 다시 수집하세요."
+            )
+
+        data.update(identity)
+
+        serialized = json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=2,
+        )
 
         output.parent.mkdir(parents=True, exist_ok=True)
         temporary.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+            serialized + "\n",
             encoding="utf-8",
         )
         temporary.replace(output)
@@ -144,7 +163,9 @@ def main():
         key["usage_status"] == "unknown"
         for key in data["access_keys"]
     )
+    masked_id = "*" * 8 + identity["account_id"][-4:]
 
+    print(f"수집 계정: {masked_id}")
     print(f"수집한 Access Key 수: {len(data['access_keys'])}")
     print(f"사용 시각 미확인 키 수: {unknown_count}")
     print(f"저장 위치: {output}")
