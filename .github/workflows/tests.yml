@@ -27,3 +27,6 @@ jobs:
 
       - name: 자동 테스트 실행
         run: python -m unittest discover -s tests -v
+
+      - name: 가상 데이터 개선 전후 데모 검증
+        run: python run_demo.py
