@@ -1,0 +1,51 @@
+{
+  "source": "synthetic",
+  "account_public_access_block": {
+    "BlockPublicAcls": false,
+    "IgnorePublicAcls": false,
+    "BlockPublicPolicy": false,
+    "RestrictPublicBuckets": false
+  },
+  "buckets": [
+    {
+      "bucket_name": "demo-public-policy",
+      "policy_status": "public",
+      "bucket_public_access_block": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": false
+      }
+    },
+    {
+      "bucket_name": "demo-restricted-public-policy",
+      "policy_status": "public",
+      "bucket_public_access_block": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+      }
+    },
+    {
+      "bucket_name": "demo-nonpublic-policy",
+      "policy_status": "nonpublic",
+      "bucket_public_access_block": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+      }
+    },
+    {
+      "bucket_name": "demo-unknown-policy",
+      "policy_status": "unknown",
+      "bucket_public_access_block": {
+        "BlockPublicAcls": false,
+        "IgnorePublicAcls": false,
+        "BlockPublicPolicy": false,
+        "RestrictPublicBuckets": false
+      }
+    }
+  ]
+}
