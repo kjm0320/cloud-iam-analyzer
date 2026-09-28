@@ -3,7 +3,41 @@ import copy
 import json
 from pathlib import Path
 
-from html_report import render_html, safe
+from html_report import RULE_NAMES, render_html, safe
+
+
+RULE_NAMES["IAM006"] = "역할 신뢰 정책의 전체 Principal 허용"
+
+
+def render_skipped_items(items, name_field, owner_field=None):
+    cards = []
+
+    for item in items:
+        owner_html = ""
+        if owner_field and item.get(owner_field) is not None:
+            owner_html = (
+                f'<div class="sub">소유자: '
+                f'{safe(item[owner_field])}</div>'
+            )
+
+        cards.append(
+            '<div class="unknown-item">'
+            f'<strong>{safe(item.get(name_field, "(이름 없음)"))}</strong>'
+            f"{owner_html}"
+            f'<p>{safe(item.get("reason", "사유 미기록"))}</p>'
+            "</div>"
+        )
+
+    return "".join(cards) or '<p class="sub">분석 제외 항목이 없습니다.</p>'
+
+
+def render_count_card(label, value):
+    return (
+        '<div class="rule">'
+        f'<div class="rule-name">{safe(label)}</div>'
+        f"<strong>{safe(value)}<small>개</small></strong>"
+        "</div>"
+    )
 
 
 def render_collected_html(report):
@@ -17,7 +51,8 @@ def render_collected_html(report):
 
     summary = report.get("summary")
     findings = report.get("findings")
-    skipped = report.get("skipped_policies")
+    skipped_policies = report.get("skipped_policies")
+    skipped_roles = report.get("skipped_roles", [])
     collection_times = report.get("collection_times")
 
     if not isinstance(summary, dict):
@@ -25,7 +60,8 @@ def render_collected_html(report):
 
     for name, items in (
         ("findings", findings),
-        ("skipped_policies", skipped),
+        ("skipped_policies", skipped_policies),
+        ("skipped_roles", skipped_roles),
     ):
         if (
             not isinstance(items, list)
@@ -36,7 +72,6 @@ def render_collected_html(report):
     if not isinstance(collection_times, dict):
         raise ValueError("collection_times는 JSON 객체여야 합니다.")
 
-    # 원본 보고서를 변경하지 않고 화면 표시용 복사본을 만듭니다.
     display_report = copy.deepcopy(report)
 
     owner_labels = {
@@ -46,67 +81,104 @@ def render_collected_html(report):
     }
 
     for finding in display_report["findings"]:
-        policy_type = finding.get("policy_type")
-
-        if policy_type not in ("managed", "inline"):
-            continue
-
-        policy_name = finding.get("policy_name", "(이름 없음)")
         context = []
 
-        if policy_type == "managed":
-            finding["user_name"] = f"관리형 정책: {policy_name}"
-            context.append(
-                f"기본 버전: {finding.get('version_id', '-')}"
-            )
-            if finding.get("policy_arn"):
-                context.append(f"정책 ARN: {finding['policy_arn']}")
-        else:
-            finding["user_name"] = f"인라인 정책: {policy_name}"
-            owner_type = owner_labels.get(
-                finding.get("owner_type"), "대상"
-            )
-            context.append(
-                f"소유 {owner_type}: "
-                f"{finding.get('owner_name', '(이름 없음)')}"
-            )
-            if finding.get("owner_arn"):
-                context.append(f"소유자 ARN: {finding['owner_arn']}")
+        if finding.get("rule_id") == "IAM006":
+            role_name = finding.get("role_name", "(이름 없음)")
+            finding["user_name"] = f"역할: {role_name}"
 
-        context.append(f"구문 번호: {finding.get('statement', '-')}")
-        context.append(f"Sid: {finding.get('sid', '-')}")
+            if finding.get("role_arn"):
+                context.append(f"역할 ARN: {finding['role_arn']}")
 
-        finding["message"] = (
-            str(finding.get("message", ""))
-            + " / "
-            + " / ".join(context)
-        )
+            context.append(
+                f"구문 번호: {finding.get('statement', '-')}"
+            )
+            context.append(f"Sid: {finding.get('sid', '-')}")
+
+            if finding.get("has_condition"):
+                context.append(
+                    "검토 상태: 조건 검토 필요"
+                )
+                context.append(
+                    "조건: "
+                    + json.dumps(
+                        finding.get("condition"),
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                context.append("검토 상태: 조건 없음")
+
+        elif finding.get("policy_type") in ("managed", "inline"):
+            policy_name = finding.get("policy_name", "(이름 없음)")
+
+            if finding["policy_type"] == "managed":
+                finding["user_name"] = f"관리형 정책: {policy_name}"
+                context.append(
+                    f"기본 버전: {finding.get('version_id', '-')}"
+                )
+                if finding.get("policy_arn"):
+                    context.append(
+                        f"정책 ARN: {finding['policy_arn']}"
+                    )
+            else:
+                finding["user_name"] = f"인라인 정책: {policy_name}"
+                owner_type = owner_labels.get(
+                    finding.get("owner_type"), "대상"
+                )
+                context.append(
+                    f"소유 {owner_type}: "
+                    f"{finding.get('owner_name', '(이름 없음)')}"
+                )
+                if finding.get("owner_arn"):
+                    context.append(
+                        f"소유자 ARN: {finding['owner_arn']}"
+                    )
+
+            context.append(
+                f"구문 번호: {finding.get('statement', '-')}"
+            )
+            context.append(f"Sid: {finding.get('sid', '-')}")
+
+        if context:
+            finding["message"] = (
+                str(finding.get("message", ""))
+                + " / "
+                + " / ".join(context)
+            )
 
     html = render_html(display_report)
 
-    skipped_items = []
-    for item in skipped:
-        policy_name = item.get("policy_name", "(이름 없음)")
-        owner_name = item.get("owner_name")
-        owner_html = ""
-
-        if owner_name is not None:
-            owner_html = (
-                f'<div class="sub">소유자: {safe(owner_name)}</div>'
-            )
-
-        skipped_items.append(
-            '<div class="unknown-item">'
-            f"<strong>{safe(policy_name)}</strong>"
-            f"{owner_html}"
-            f'<p>{safe(item.get("reason", "사유 미기록"))}</p>'
-            "</div>"
+    policy_cards = "".join(
+        render_count_card(label, summary.get(field, "미기록"))
+        for label, field in (
+            ("분석 대상 정책", "candidate_policy_count"),
+            ("분석 완료 정책", "analyzed_policy_count"),
+            ("분석 제외 정책", "skipped_policy_count"),
         )
+    )
 
-    if not skipped_items:
-        skipped_items.append(
-            '<p class="sub">문서별 분석에서 제외된 정책은 없습니다.</p>'
+    trust_cards = "".join(
+        render_count_card(label, summary.get(field, "미기록"))
+        for label, field in (
+            ("수집된 역할", "role_count"),
+            ("신뢰 정책 분석 완료", "analyzed_role_count"),
+            ("신뢰 정책 분석 제외", "skipped_role_count"),
+            ("IAM006 검토 대상", "trust_finding_count"),
+            ("조건 검토 필요", "trust_condition_review_count"),
         )
+    )
+
+    policy_skips_html = render_skipped_items(
+        skipped_policies,
+        "policy_name",
+        "owner_name",
+    )
+    role_skips_html = render_skipped_items(
+        skipped_roles,
+        "role_name",
+    )
 
     time_rows = "".join(
         "<tr>"
@@ -114,7 +186,7 @@ def render_collected_html(report):
         f"<td>{safe(collection_times.get(field, '미기록'))}</td>"
         "</tr>"
         for field, label in (
-            ("policies", "정책"),
+            ("policies", "정책 및 역할 신뢰 정보"),
             ("users", "사용자 및 MFA"),
             ("keys", "Access Key"),
         )
@@ -122,33 +194,25 @@ def render_collected_html(report):
 
     extra_sections = f"""
 <section class="panel">
-    <h2>실제 AWS 정책 분석 범위</h2>
+    <h2>일반 권한 정책 분석 범위</h2>
     <p class="section-note">
-        아래 개수는 일반 권한 정책 문서 기준입니다.
-        역할 신뢰 정책과 리소스 정책은 포함하지 않습니다.
+        관리형 정책의 기본 버전과 인라인 정책에 IAM001·IAM002를 적용합니다.
+        역할 신뢰 정책은 아래에서 별도로 집계합니다.
     </p>
-    <div class="rules">
-        <div class="rule">
-            <div class="rule-name">분석 대상 정책</div>
-            <strong>{safe(summary.get("candidate_policy_count", "-"))}
-                <small>개</small>
-            </strong>
-        </div>
-        <div class="rule">
-            <div class="rule-name">분석 완료 정책</div>
-            <strong>{safe(summary.get("analyzed_policy_count", "-"))}
-                <small>개</small>
-            </strong>
-        </div>
-        <div class="rule active">
-            <div class="rule-name">분석 제외 정책</div>
-            <strong>{len(skipped)}<small>개</small></strong>
-        </div>
-    </div>
+    <div class="rules">{policy_cards}</div>
+</section>
+
+<section class="panel">
+    <h2>역할 신뢰 정책 분석 현황</h2>
     <p class="section-note">
-        정책 구문의 탐지를 특정 사용자의 실제 유효 권한으로
-        해석하면 안 됩니다. 정책 연결과 권한 경계의 영향은
-        종합 평가하지 않습니다.
+        조건 검토 필요 건수는 IAM006 검토 대상 건수에 포함됩니다.
+        조건이 있는 구문을 무조건 외부 공개로 판정하지 않습니다.
+    </p>
+    <div class="rules">{trust_cards}</div>
+    <p class="section-note">
+        IAM006은 전체 Principal을 지정한 역할 수임 허용 구문을 점검합니다.
+        실제 역할 수임 성공 여부와 특정 서비스·계정 신뢰의 적절성은
+        판정하지 않습니다.
     </p>
 </section>
 
@@ -158,14 +222,22 @@ def render_collected_html(report):
         분석 제외는 안전 판정이 아닙니다.
         미지원 구문이나 입력 문제를 별도로 확인해야 합니다.
     </p>
-    {"".join(skipped_items)}
+    {policy_skips_html}
+</section>
+
+<section class="panel">
+    <h2>신뢰 정책 분석 제외 역할과 사유</h2>
+    <p class="section-note">
+        문서 누락이나 미지원 형식으로 분석하지 못한 역할입니다.
+    </p>
+    {role_skips_html}
 </section>
 
 <section class="panel">
     <h2>데이터별 수집 시각</h2>
     <p class="section-note">
-        아래 시각은 각 수집기의 완료 시각입니다.
-        세 파일이 동일 순간의 계정 상태를 나타내지는 않습니다.
+        각 수집기의 완료 시각이며,
+        동일 순간의 계정 상태를 나타내지는 않습니다.
     </p>
     <div class="table-wrap">
         <table>

@@ -6,6 +6,7 @@ from account_analyzer import analyze_users
 from access_key_analyzer import analyze_access_keys
 from unused_key_analyzer import analyze_unused_keys
 from analyze_collected_policies import analyze_collected_policies
+from analyze_collected_trust import analyze_collected_trust
 
 
 def load_json(path):
@@ -84,6 +85,7 @@ def build_collected_report(policies, users, keys):
     identity = validate_collected_identity(policies, users, keys)
 
     policy_result = analyze_collected_policies(policies)
+    trust_result = analyze_collected_trust(policies)
     user_findings = analyze_users(users)
     aged_key_findings = analyze_access_keys(keys)
     unused_result = analyze_unused_keys(keys)
@@ -122,9 +124,11 @@ def build_collected_report(policies, users, keys):
         *user_findings,
         *aged_key_findings,
         *unused_result["findings"],
+        *trust_result["findings"],
     ]
 
     policy_summary = policy_result["summary"]
+    trust_summary = trust_result["summary"]
 
     return {
         "schema_version": "1.0",
@@ -146,30 +150,31 @@ def build_collected_report(policies, users, keys):
             "unknown_count": len(unused_result["unknowns"]),
             "user_count": len(users["users"]),
             "access_key_count": len(keys["access_keys"]),
-            "candidate_policy_count": (
-                policy_summary["candidate_policy_count"]
-            ),
-            "analyzed_policy_count": (
-                policy_summary["analyzed_policy_count"]
-            ),
-            "skipped_policy_count": (
-                policy_summary["skipped_policy_count"]
-            ),
+            "candidate_policy_count": policy_summary["candidate_policy_count"],
+            "analyzed_policy_count": policy_summary["analyzed_policy_count"],
+            "skipped_policy_count": policy_summary["skipped_policy_count"],
+            "role_count": trust_summary["role_count"],
+            "analyzed_role_count": trust_summary["analyzed_role_count"],
+            "skipped_role_count": trust_summary["skipped_role_count"],
+            "trust_finding_count": trust_summary["finding_count"],
+            "trust_condition_review_count": trust_summary["condition_review_count"],
         },
         "findings": findings,
         "unknowns": unused_result["unknowns"],
         "skipped_policies": policy_result["skipped_policies"],
+        "skipped_roles": trust_result["skipped_roles"],
         "limitations": [
             "저장된 AWS 수집 파일을 분석하며 이번 실행에서 AWS에 접속하지 않습니다.",
             "파일에 기록된 계정 ID와 파티션의 일치 여부를 확인합니다.",
             "로컬 파일의 위변조 여부를 증명하는 검증은 아닙니다.",
             "파일별 수집 시각이 다르며 동일 순간의 계정 상태를 보장하지 않습니다.",
             "정책은 IAM001과 IAM002를 적용하며 실제 유효 권한은 계산하지 않습니다.",
-            "역할 신뢰 정책, 리소스 정책, SCP는 이번 분석 대상이 아닙니다.",
+            "신뢰 정책은 IAM006을 적용하며 조건이 있으면 추가 검토 대상으로 표시합니다.",
+            "리소스 정책과 SCP는 이번 분석 대상이 아닙니다.",
             "루트 계정과 SSO 사용자는 사용자 및 키 점검 대상에 포함되지 않습니다.",
             "MFA는 장치 연결 여부를 점검하며 실제 사용 강제 여부는 평가하지 않습니다.",
             "키의 생성 후 경과 기간과 미사용 기간 기준은 각각 90일입니다.",
-            "사용 정보 판단 불가 항목과 분석 제외 정책은 안전 판정이 아닙니다.",
+            "사용 정보 판단 불가 항목과 분석 제외 정책·역할은 안전 판정이 아닙니다.",
             "탐지 0건이 계정 전체의 안전함을 의미하지는 않습니다.",
         ],
     }
@@ -178,12 +183,7 @@ def build_collected_report(policies, users, keys):
 def main():
     project_root = Path(__file__).resolve().parent
     private_data = project_root / "data" / "private"
-    output = (
-        project_root
-        / "reports"
-        / "private"
-        / "combined_report.json"
-    )
+    output = project_root / "reports" / "private" / "combined_report.json"
     temporary = output.with_suffix(".json.tmp")
 
     try:
@@ -192,17 +192,10 @@ def main():
         keys = load_json(private_data / "access_keys.json")
 
         report = build_collected_report(policies, users, keys)
-        serialized = json.dumps(
-            report,
-            ensure_ascii=False,
-            indent=2,
-        )
+        serialized = json.dumps(report, ensure_ascii=False, indent=2)
 
         output.parent.mkdir(parents=True, exist_ok=True)
-        temporary.write_text(
-            serialized + "\n",
-            encoding="utf-8",
-        )
+        temporary.write_text(serialized + "\n", encoding="utf-8")
         temporary.replace(output)
 
     except (OSError, ValueError) as error:
@@ -218,7 +211,10 @@ def main():
     print(f"분석한 키 수: {summary['access_key_count']}")
     print(f"분석 완료 정책 수: {summary['analyzed_policy_count']}")
     print(f"분석 제외 정책 수: {summary['skipped_policy_count']}")
-    print(f"탐지 건수: {summary['finding_count']}")
+    print(f"신뢰 정책 분석 완료 역할 수: {summary['analyzed_role_count']}")
+    print(f"신뢰 정책 분석 제외 역할 수: {summary['skipped_role_count']}")
+    print(f"신뢰 정책 검토 대상 건수: {summary['trust_finding_count']}")
+    print(f"전체 탐지 건수: {summary['finding_count']}")
     print(f"사용 정보 판단 불가 건수: {summary['unknown_count']}")
     print(f"보고서 저장: {output}")
 
