@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "key_data_collected_at": "2026-09-24T00:00:00Z",
+  "summary": {
+    "finding_count": 0,
+    "unknown_count": 0,
+    "user_count": 1,
+    "access_key_count": 2
+  },
+  "findings": [],
+  "unknowns": [],
+  "limitations": [
+    "이 보고서는 공개용 가상 데이터로 생성한 데모입니다.",
+    "실제 AWS에 접속하거나 계정 설정을 변경하지 않습니다.",
+    "IAM001부터 IAM005까지 구현된 규칙만 적용합니다.",
+    "실제 유효 권한, 정책 조건, 다른 정책의 거부는 종합 평가하지 않습니다.",
+    "개선 후 키는 사용처 확인 후 불필요하다고 판단한 상황을 가정하여 비활성화했습니다.",
+    "비활성 키는 오래된 키와 미사용 키 점검 대상에서 제외됩니다.",
+    "판단 불가 감소는 사용 이력을 알아낸 결과가 아니라 키 비활성화의 결과입니다.",
+    "탐지 0건이 전체 보안 상태의 안전함을 보장하지 않습니다."
+  ],
+  "report_type": "synthetic_demo",
+  "demo_stage": "after",
+  "sources": {
+    "policy": "after/policy.json",
+    "users": "after/users.json",
+    "keys": "after/keys.json"
+  }
+}

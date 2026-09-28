@@ -1,0 +1,9 @@
+{
+  "users": [
+    {
+      "user_name": "demo-user",
+      "console_access": true,
+      "mfa_enabled": true
+    }
+  ]
+}
