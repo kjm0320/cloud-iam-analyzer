@@ -1,0 +1,55 @@
+{
+  "roles": [
+    {
+      "role_name": "demo-open-role",
+      "trust_policy": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "AllowAllPrincipals",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    },
+    {
+      "role_name": "demo-org-restricted-role",
+      "trust_policy": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "AllowOrganizationPrincipals",
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": "*"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+              "StringEquals": {
+                "aws:PrincipalOrgID": "o-example123"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "role_name": "demo-service-role",
+      "trust_policy": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "AllowEc2Service",
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    }
+  ]
+}
