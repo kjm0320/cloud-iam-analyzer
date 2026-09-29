@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from analyzer import analyze_policy
+from passrole_analyzer import analyze_passrole
 from validation import validate_policy
 
 
@@ -23,7 +24,7 @@ def decode_document(document):
     raise ValueError("정책 문서는 JSON 객체여야 합니다.")
 
 
-def analyze_collected_policies(data):
+def analyze_collected_policies(data, include_passrole=False):
     if not isinstance(data, dict):
         raise ValueError("수집 데이터는 JSON 객체여야 합니다.")
 
@@ -61,7 +62,12 @@ def analyze_collected_policies(data):
         try:
             policy = decode_document(document)
             validate_policy(policy)
+
             results = analyze_policy(policy)
+
+            if include_passrole:
+                results.extend(analyze_passrole(policy))
+
         except ValueError as error:
             record_skip(context, str(error))
             return
@@ -91,7 +97,10 @@ def analyze_collected_policies(data):
             or not isinstance(versions, list)
             or not all(isinstance(item, dict) for item in versions)
         ):
-            record_skip(context, "정책 기본 버전 정보가 올바르지 않습니다.")
+            record_skip(
+                context,
+                "정책 기본 버전 정보가 올바르지 않습니다.",
+            )
             continue
 
         default_versions = [
@@ -127,7 +136,6 @@ def analyze_collected_policies(data):
 
             for policy in inline_policies:
                 candidate_count += 1
-
                 context = {
                     "policy_type": "inline",
                     "owner_type": owner_type,
@@ -150,25 +158,36 @@ def analyze_collected_policies(data):
                     context,
                 )
 
+    enabled_rules = ["IAM001", "IAM002"]
+    if include_passrole:
+        enabled_rules.append("IAM008")
+
     return {
         "schema_version": "1.0",
         "source": "collected_iam_policies",
         "collected_at": data.get("collected_at"),
+        "enabled_rules": enabled_rules,
         "summary": {
             "candidate_policy_count": candidate_count,
             "analyzed_policy_count": analyzed_count,
             "skipped_policy_count": len(skipped),
             "finding_count": len(findings),
+            "passrole_finding_count": sum(
+                finding["rule_id"] == "IAM008"
+                for finding in findings
+            ),
         },
         "findings": findings,
         "skipped_policies": skipped,
         "limitations": [
-            "IAM001과 IAM002를 정책 문서별로 적용합니다.",
+            "활성화된 규칙을 정책 문서별로 적용합니다.",
             "관리형 정책은 현재 기본 버전만 분석합니다.",
             "역할 신뢰 정책은 이번 분석 대상이 아닙니다.",
             "정책의 연결 여부와 권한 경계로 사용되는지에 따라 의미가 다릅니다.",
             "탐지 결과를 특정 사용자의 실제 유효 권한으로 해석하면 안 됩니다.",
             "명시적 거부, 조건, SCP, 권한 경계 등을 종합 평가하지 않습니다.",
+            "IAM008은 넓은 PassRole 허용 범위를 찾으며 권한 상승 성공을 판정하지 않습니다.",
+            "분석 중 검증 오류가 발생한 정책은 문서 전체를 분석 제외로 기록합니다.",
             "분석 제외 정책은 안전 판정이 아닙니다.",
             "수집 데이터에 없는 정책은 평가하지 않습니다.",
         ],
@@ -176,16 +195,19 @@ def analyze_collected_policies(data):
 
 
 def main():
+    project_root = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(
         description="수집한 IAM 정책을 문서별로 분석합니다."
     )
-    project_root = Path(__file__).resolve().parent
-
     parser.add_argument(
         "--input",
         type=Path,
         default=project_root / "data" / "private" / "policies.json",
-        help="collect_policies.py로 생성한 수집 파일",
+    )
+    parser.add_argument(
+        "--include-passrole",
+        action="store_true",
+        help="IAM008 PassRole 범위 점검을 함께 실행합니다.",
     )
     args = parser.parse_args()
 
@@ -204,7 +226,10 @@ def main():
         with args.input.open(encoding="utf-8-sig") as file:
             data = json.load(file)
 
-        report = analyze_collected_policies(data)
+        report = analyze_collected_policies(
+            data,
+            include_passrole=args.include_passrole,
+        )
         serialized = json.dumps(
             report,
             ensure_ascii=False,
@@ -226,10 +251,12 @@ def main():
         )
 
     summary = report["summary"]
+    print("적용 규칙: " + ", ".join(report["enabled_rules"]))
     print(f"분석 대상 정책 수: {summary['candidate_policy_count']}")
     print(f"분석 완료 정책 수: {summary['analyzed_policy_count']}")
     print(f"분석 제외 정책 수: {summary['skipped_policy_count']}")
-    print(f"탐지 건수: {summary['finding_count']}")
+    print(f"전체 탐지 건수: {summary['finding_count']}")
+    print(f"PassRole 검토 대상 건수: {summary['passrole_finding_count']}")
     print(f"보고서 저장: {output}")
     print("탐지 결과는 정책 구문 검토 대상이며 실제 유효 권한 판정은 아닙니다.")
 

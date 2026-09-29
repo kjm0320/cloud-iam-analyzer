@@ -7,7 +7,7 @@ from html_report import RULE_NAMES, render_html, safe
 
 
 RULE_NAMES["IAM006"] = "역할 신뢰 정책의 전체 Principal 허용"
-
+RULE_NAMES["IAM008"] = "PassRole의 넓은 역할 허용 범위"
 
 def render_skipped_items(items, name_field, owner_field=None):
     cards = []
@@ -140,6 +140,29 @@ def render_collected_html(report):
                 f"구문 번호: {finding.get('statement', '-')}"
             )
             context.append(f"Sid: {finding.get('sid', '-')}")
+        if finding.get("rule_id") == "IAM008":
+            context.append(
+                "허용 작업: "
+                + ", ".join(finding.get("matching_actions", []))
+            )
+            context.append(
+                "역할 범위: "
+                + ", ".join(finding.get("wildcard_resources", []))
+            )
+
+            if finding.get("has_condition"):
+                context.append(
+                    "조건 검토 필요: "
+                    + json.dumps(
+                        finding.get("condition"),
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+            else:
+                context.append("해당 구문에 조건 없음")
+
+            context.append("실제 권한 상승 가능 여부는 별도 검증 필요")
 
         if context:
             finding["message"] = (
@@ -196,7 +219,7 @@ def render_collected_html(report):
 <section class="panel">
     <h2>일반 권한 정책 분석 범위</h2>
     <p class="section-note">
-        관리형 정책의 기본 버전과 인라인 정책에 IAM001·IAM002를 적용합니다.
+        관리형 정책의 기본 버전과 인라인 정책을 분석합니다. IAM008은 활성화된 경우 함께 적용합니다.
         역할 신뢰 정책은 아래에서 별도로 집계합니다.
     </p>
     <div class="rules">{policy_cards}</div>
