@@ -11,27 +11,15 @@ def build_steps(profile):
     return [
         (
             "사용자 및 MFA 수집",
-            [
-                "collect_users.py",
-                "--profile",
-                profile,
-            ],
+            ["collect_users.py", "--profile", profile],
         ),
         (
             "Access Key 정보 수집",
-            [
-                "collect_access_keys.py",
-                "--profile",
-                profile,
-            ],
+            ["collect_access_keys.py", "--profile", profile],
         ),
         (
             "IAM 정책 및 연결 정보 수집",
-            [
-                "collect_policies.py",
-                "--profile",
-                profile,
-            ],
+            ["collect_policies.py", "--profile", profile],
         ),
         (
             "실제 수집 데이터 통합 분석",
@@ -41,7 +29,16 @@ def build_steps(profile):
             "HTML 보고서 생성",
             ["html_collected_report.py"],
         ),
+        (
+            "IAM 연결 관계 정리",
+            ["build_relationships.py"],
+        ),
+        (
+            "IAM 관계 그래프 생성",
+            ["html_relationships.py"],
+        ),
     ]
+
 
 
 def run_pipeline(profile):
@@ -143,6 +140,8 @@ def main():
 
     print("\n[완료] 수집·분석·HTML 생성이 모두 성공했습니다.")
     print(f"보고서 위치: {report_path}")
+    graph_path = PROJECT_ROOT / "reports" / "private" / "relationships.html"
+    print(f"관계 그래프 위치: {graph_path}")
     print("실제 계정 정보가 포함된 보고서이므로 공개하지 마세요.")
 
 

@@ -36,6 +36,8 @@ class TestRunAwsScan(unittest.TestCase):
             ],
             ["scan_collected.py"],
             ["html_collected_report.py"],
+            ["build_relationships.py"],
+            ["html_relationships.py"],
         ]
 
         expected_calls = [
@@ -56,7 +58,7 @@ class TestRunAwsScan(unittest.TestCase):
     @patch("run_aws_scan.subprocess.run")
     @patch("run_aws_scan.Path.is_file", return_value=True)
     def test_failure_stops_remaining_steps(self, mock_is_file, mock_run):
-        for failed_step in range(5):
+        for failed_step in range(7):
             with self.subTest(failed_step=failed_step + 1):
                 mock_run.reset_mock()
                 mock_run.side_effect = [
