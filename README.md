@@ -317,3 +317,43 @@ CI에서는 실제 AWS에 접속하지 않으며 AWS 인증 키가 필요하지 
 샘플로 누구나 재현할 수 있고,
 실제 AWS 계정에도 읽기 전용으로 적용할 수 있는
 보안 분석 도구를 만드는 것입니다.
+
+## IAM 관계 그래프
+
+사용자·그룹·역할·관리형 정책의 연결 관계를 HTML로 시각화합니다.
+
+- 그룹 소속
+- 관리형 정책 연결
+- 권한 경계 연결: 보라색 점선으로 구분
+
+권한 경계는 권한을 부여하는 정책이 아니라 허용 가능한 권한의 상한입니다. 그래프는 수집한 설정의 연결 관계를 보여주며, 실제 유효 권한이나 권한 상승 가능성을 확정하지 않습니다.
+
+### AWS 계정 없이 데모 실행
+
+합성 데이터로 그래프를 생성하고 노드 5개와 연결 4개를 검증합니다. AWS API를 호출하지 않습니다.
+
+```cmd
+python run_relationship_demo.py
+start "" "reports\demo\relationships.html"
+```
+
+GitHub Actions에서도 이 데모를 실행해 관계 생성 결과를 검증합니다.
+
+### 수집한 AWS 데이터로 실행
+
+기존에 수집한 `data/private/policies.json`이 필요합니다.
+
+```cmd
+python build_relationships.py
+python html_relationships.py
+start "" "reports\private\relationships.html"
+```
+
+전체 수집·분석 명령에도 관계 그래프 생성이 포함되어 있습니다.
+
+```cmd
+python run_aws_scan.py --profile cloud-iam-analyzer
+```
+
+실제 AWS 수집 데이터와 보고서는 `data/private/`, `reports/private/`에 저장하며 GitHub 공개 대상에서 제외합니다.
+
