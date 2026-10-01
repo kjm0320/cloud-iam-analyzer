@@ -357,3 +357,36 @@ python run_aws_scan.py --profile cloud-iam-analyzer
 
 실제 AWS 수집 데이터와 보고서는 `data/private/`, `reports/private/`에 저장하며 GitHub 공개 대상에서 제외합니다.
 
+
+### PassRole 검토 대상 연결 분석
+
+넓은 역할 범위를 허용하는 `iam:PassRole` 구문을 탐지하고, 해당 관리형 정책에 연결된 사용자·역할을 HTML 관계 그래프 아래 표에 표시합니다.
+
+- 사용자·역할에 직접 연결된 관리형 정책 추적
+- 그룹에 연결된 관리형 정책과 소속 사용자 연결
+- 권한 경계 연결은 권한 부여 경로에서 제외
+- 정책 구문, 역할 리소스 범위, 조건 및 연결 경로 표시
+- 분석하지 못한 정책과 제외 사유 표시
+
+#### AWS 없이 데모 실행
+
+```cmd
+python run_passrole_demo.py
+start "" "reports\demo\passrole_relationships.html"
+```
+
+합성 데이터에서 탐지 구문 1개와 검토 대상 2개를 검증합니다.
+
+| 검토 대상 | 정책 연결 경로 |
+| --- | --- |
+| demo-user | 그룹 경유 |
+| demo-service-role | 직접 연결 |
+
+AWS API를 호출하지 않으며, GitHub Actions에서도 데모 결과를 검증합니다.
+
+#### 분석 한계
+
+이 연결 분석은 관리형 정책을 대상으로 하며 인라인 정책은 포함하지 않습니다. 조건, 명시적 거부, 권한 경계, SCP를 종합 평가하지 않습니다.
+
+전달 대상 역할의 권한·신뢰 정책과 서비스 작업 권한을 함께 검증하지 않으므로, 결과는 추가 검토 후보입니다. 실제 PassRole 허용 여부나 권한 상승 가능성을 확정하지 않습니다.
+

@@ -18,3 +18,9 @@ reports/private/
 # 편집기
 .vscode/
 .idea/
+
+/reports/demo/passrole_relationships.html
+/reports/demo/passrole_relationships.json
+/reports/demo/relationships.html
+/reports/demo/relationships.json
+/test_output.txt
