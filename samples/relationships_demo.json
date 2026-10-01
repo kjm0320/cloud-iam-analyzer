@@ -1,0 +1,54 @@
+{
+  "source": "synthetic",
+  "account_id": "123456789012",
+  "collected_at": "2026-09-29T00:00:00+00:00",
+  "authorization_details": {
+    "Policies": [
+      {
+        "Arn": "arn:aws:iam::123456789012:policy/demo-read",
+        "PolicyName": "demo-read"
+      },
+      {
+        "Arn": "arn:aws:iam::123456789012:policy/demo-boundary",
+        "PolicyName": "demo-boundary"
+      }
+    ],
+    "UserDetailList": [
+      {
+        "Arn": "arn:aws:iam::123456789012:user/demo-user",
+        "UserName": "demo-user",
+        "GroupList": [
+          "demo-developers"
+        ],
+        "AttachedManagedPolicies": [],
+        "PermissionsBoundary": {
+          "PermissionsBoundaryArn": "arn:aws:iam::123456789012:policy/demo-boundary"
+        }
+      }
+    ],
+    "GroupDetailList": [
+      {
+        "Arn": "arn:aws:iam::123456789012:group/demo-developers",
+        "GroupName": "demo-developers",
+        "AttachedManagedPolicies": [
+          {
+            "PolicyArn": "arn:aws:iam::123456789012:policy/demo-read",
+            "PolicyName": "demo-read"
+          }
+        ]
+      }
+    ],
+    "RoleDetailList": [
+      {
+        "Arn": "arn:aws:iam::123456789012:role/demo-service-role",
+        "RoleName": "demo-service-role",
+        "AttachedManagedPolicies": [
+          {
+            "PolicyArn": "arn:aws:iam::123456789012:policy/demo-read",
+            "PolicyName": "demo-read"
+          }
+        ]
+      }
+    ]
+  }
+}
