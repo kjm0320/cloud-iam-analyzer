@@ -32,3 +32,5 @@ jobs:
         run: python run_demo.py
       - name: 가상 데이터 관계 그래프 데모 검증
         run: python run_relationship_demo.py
+      - name: PassRole 연결 데모 검증
+        run: python run_passrole_demo.py
