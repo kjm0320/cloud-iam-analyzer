@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-
+from passrole_relationships import build_passrole_reviews
 
 def build_relationships(data):
     details = data.get("authorization_details")
@@ -175,6 +175,7 @@ def main():
             raise ValueError("수집 파일은 JSON 객체여야 합니다.")
 
         report = build_relationships(data)
+        report["passrole_review"] = build_passrole_reviews(data, report)
         serialized = json.dumps(report, ensure_ascii=False, indent=2)
 
         output.parent.mkdir(parents=True, exist_ok=True)

@@ -22,7 +22,7 @@ def safe(value):
     return escape(str(value), quote=True)
 
 
-def render_relationships(report):
+def _render_base_relationships(report):
     nodes = report["nodes"]
     edges = report["edges"]
     warnings = report["warnings"]
@@ -237,6 +237,97 @@ li {{ margin: 8px 0; }}
 </body>
 </html>
 """
+
+def render_relationships(report):
+    page = _render_base_relationships(report)
+    review_data = report.get("passrole_review")
+
+    if review_data is None:
+        return page
+
+    rows = []
+
+    for review in review_data["reviews"]:
+        resources = "<br>".join(
+            safe(value) for value in review["wildcard_resources"]
+        )
+        condition = (
+            safe(json.dumps(
+                review["condition"],
+                ensure_ascii=False,
+                sort_keys=True,
+            ))
+            if review["has_condition"]
+            else "해당 구문에 조건 없음"
+        )
+
+        for principal in review["principals"]:
+            routes = []
+            if principal["direct_attachment"]:
+                routes.append("직접 정책 연결")
+            routes.extend(
+                f"그룹 경유: {group}"
+                for group in principal["via_groups"]
+            )
+
+            rows.append(
+                "<tr>"
+                f"<td>{safe(review['policy_name'])}<br>"
+                f"구문 #{safe(review['statement'])}</td>"
+                f"<td>{safe(principal['name'])}<br>"
+                f"{safe(principal['type'])}<br>"
+                f"{safe(principal['arn'])}</td>"
+                f"<td>{'<br>'.join(safe(route) for route in routes)}</td>"
+                f"<td>{resources}</td>"
+                f"<td>{condition}</td>"
+                "</tr>"
+            )
+
+    table_rows = "".join(rows) or (
+        '<tr><td colspan="5">'
+        "분석한 범위에서 연결된 검토 대상이 없습니다."
+        "</td></tr>"
+    )
+
+    skipped = "".join(
+        f"<li>{safe(item['policy_arn'])}: {safe(item['reason'])}</li>"
+        for item in review_data["skipped_policies"]
+    )
+    limitations = "".join(
+        f"<li>{safe(item)}</li>"
+        for item in review_data["limitations"]
+    )
+
+    section = f"""
+    <section style="max-width:1200px;margin:24px auto;padding:24px;
+                    background:white;border:1px solid #ddd;
+                    border-radius:12px;overflow-wrap:anywhere">
+      <h2>PassRole 검토 대상</h2>
+      <p>연결된 정책의 탐지 구문:
+         {safe(review_data["review_count"])}건 /
+         분석 제외 정책:
+         {len(review_data["skipped_policies"])}개</p>
+      <p>아래 대상은 추가 검토가 필요합니다.
+         실제 권한 부여 또는 권한 상승이 확인된 결과는 아닙니다.</p>
+      <div style="overflow-x:auto">
+        <table style="width:100%;min-width:850px">
+          <thead><tr>
+            <th>정책 / 구문</th><th>사용자·역할</th>
+            <th>연결 경로</th><th>역할 리소스 범위</th><th>조건</th>
+          </tr></thead>
+          <tbody>{table_rows}</tbody>
+        </table>
+      </div>
+      <h3>분석 제외 정책</h3>
+      <ul>{skipped or "<li>없음</li>"}</ul>
+      <h3>분석 범위와 한계</h3>
+      <ul>{limitations}</ul>
+    </section>
+    """
+
+    return page.replace("</body>", section + "</body>", 1)
+
+
 
 
 def main():
