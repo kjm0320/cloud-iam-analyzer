@@ -54,6 +54,11 @@ def _render_base_relationships(report):
     height = max(300, 110 * max(map(len, columns), default=0) + 100)
 
     lines = []
+    bypass_y = max(
+        (y + 76 for _, y in positions.values()),
+        default=80,
+    ) + 40
+
     for edge in edges:
         source = edge["source"]
         target = edge["target"]
@@ -68,20 +73,46 @@ def _render_base_relationships(report):
         sx, sy = positions[source]
         tx, ty = positions[target]
 
-        # 같은 대상에 정책 연결과 권한 경계가 있으면 선을 분리합니다.
         offset = 12 if relation == "permissions_boundary" else -6
         x1, y1 = sx + 270, sy + 35 + offset
         x2, y2 = tx, ty + 35 + offset
-        mid = (x1 + x2) / 2
+
+        if tx - sx > 370:
+            # 가운데 열을 건너뛰는 연결은 모든 상자 아래로 우회합니다.
+            left_lane = x1 + 30
+            right_lane = x2 - 30
+            path = (
+                f"M {x1} {y1} "
+                f"H {left_lane} "
+                f"V {bypass_y} "
+                f"H {right_lane} "
+                f"V {y2} "
+                f"H {x2}"
+            )
+            height = max(height, bypass_y + 40)
+            bypass_y += 24
+        else:
+            # 이웃한 열 사이의 연결은 기존 곡선을 사용합니다.
+            mid = (x1 + x2) / 2
+            path = (
+                f"M {x1} {y1} "
+                f"C {mid} {y1}, {mid} {y2}, {x2} {y2}"
+            )
+
+        source_name = node_by_id[source]["name"]
+        target_name = node_by_id[target]["name"]
+        tooltip = f"{source_name} → {target_name}: {label}"
 
         lines.append(
-            f'<path d="M {x1} {y1} C {mid} {y1}, '
-            f'{mid} {y2}, {x2} {y2}" '
+            f'<path d="{path}" '
             f'fill="none" stroke="{color}" stroke-width="2" '
+            f'stroke-linejoin="round" '
             f'stroke-dasharray="{dash}" '
             f'marker-end="url(#{relation})">'
-            f"<title>{safe(label)}</title></path>"
+            f"<title>{safe(tooltip)}</title></path>"
         )
+
+    
 
     boxes = []
     for node in nodes:
